@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Budget Traveller: cheapest route with coupons</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E9EEEC; --panel:#F8FAF9; --ink:#14213D; --muted:#566676; --line:#C3CFD3;
+  --edge:#8B9CA8; --path:#2B5C8A; --gold:#D4A000; --gold-ink:#7D5C00;
+  --green:#168046; --red:#C62F2F; --orange:#D97706; --field:#FFFFFF; --danger:#B3261E;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1520; --panel:#15202D; --ink:#E6EDF3; --muted:#9AABBA; --line:#2A3A4A;
+    --edge:#5E7181; --path:#6AA6E0; --gold:#F2C230; --gold-ink:#F2C230;
+    --green:#2FA65F; --red:#E04F4F; --orange:#F0902A; --field:#0F1925; --danger:#FF8A80;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1520; --panel:#15202D; --ink:#E6EDF3; --muted:#9AABBA; --line:#2A3A4A;
+  --edge:#5E7181; --path:#6AA6E0; --gold:#F2C230; --gold-ink:#F2C230;
+  --green:#2FA65F; --red:#E04F4F; --orange:#F0902A; --field:#0F1925; --danger:#FF8A80;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.45;font-size:15px}
+h1{font-size:1.65rem;line-height:1.15;margin:0;font-weight:800;letter-spacing:-.01em}
+h2{font-size:1rem;margin:0 0 .6rem;font-weight:700}
+.wrap{max-width:1280px;margin:0 auto;padding:20px 18px 40px}
+header p{margin:.35rem 0 0;color:var(--muted);max-width:68ch}
+.grid{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:18px;margin-top:18px;align-items:start}
+@media (max-width:920px){.grid{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.stack{display:flex;flex-direction:column;gap:14px;min-width:0}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px -4px 14px}
+.tab{flex:1;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:inherit;font-weight:600;padding:8px 4px;cursor:pointer}
+.tab[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--path)}
+.tab:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--path);outline-offset:2px}
+label{display:block;font-size:.85rem;color:var(--muted);margin-bottom:4px;font-weight:500}
+input[type=number],input[type=file],textarea,select{width:100%;font:inherit;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+textarea{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.85rem;min-height:210px;resize:vertical;line-height:1.4}
+.row{display:flex;gap:10px}
+.row>div{flex:1;min-width:0}
+.hint{font-size:.82rem;color:var(--muted);margin:.5rem 0 0}
+.btn{font:inherit;font-weight:700;border-radius:7px;border:1px solid var(--ink);background:var(--ink);color:var(--panel);padding:9px 14px;cursor:pointer}
+.btn.secondary{background:transparent;color:var(--ink);border-color:var(--line)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.mode{display:none}.mode.on{display:block}
+#msg{margin-top:12px;color:var(--danger);font-weight:600;font-size:.9rem}
+#msg:empty{display:none}
+.answer{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.answer .big{font-size:2.6rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+.answer .lbl{color:var(--muted);font-weight:500}
+.route{margin:.6rem 0 0;word-break:break-word}
+.route b{font-variant-numeric:tabular-nums}
+.chip-coupon{color:var(--gold-ink);font-weight:700}
+details{margin-top:12px}
+summary{cursor:pointer;font-weight:600}
+pre{margin:8px 0 0;max-height:220px;overflow:auto;background:var(--field);border:1px solid var(--line);border-radius:6px;padding:10px;font-size:.78rem;line-height:1.4}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+.stat{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--field)}
+.stat span{display:block;font-size:.78rem;color:var(--muted);font-weight:500}
+.stat strong{font-size:1.5rem;font-variant-numeric:tabular-nums;font-weight:800}
+.stat small{font-size:.85rem;color:var(--muted);font-weight:500}
+.now{min-height:2.7em;margin:0 0 10px;font-weight:600;font-variant-numeric:tabular-nums}
+.now .gold{color:var(--gold-ink)}
+.stage{background:var(--field);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+svg{display:block;width:100%;height:auto}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.controls select{width:auto}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:.85rem;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+.legend i.ln{width:22px;height:4px;border-radius:2px;vertical-align:2px}
+
+/* graph */
+.edge{fill:none;stroke:var(--edge);stroke-width:1.4;opacity:.8}
+.edge.onpath{stroke:var(--path);stroke-width:3.2;opacity:1}
+.edge.flown{stroke:var(--path);stroke-width:4.2}
+.edge.coupon{stroke:var(--gold);stroke-width:4.8;opacity:1}
+.edge.active{filter:drop-shadow(0 0 4px var(--path))}
+.edge.coupon.active{filter:drop-shadow(0 0 5px var(--gold))}
+.elabel{font-size:12px;fill:var(--muted);paint-order:stroke;stroke:var(--field);stroke-width:4px;stroke-linejoin:round;text-anchor:middle;dominant-baseline:central;font-variant-numeric:tabular-nums}
+.elabel.onpath{fill:var(--ink);font-weight:700;font-size:13px}
+.elabel.coupon{fill:var(--gold-ink);font-weight:800;font-size:13.5px}
+.node circle{fill:var(--panel);stroke:var(--ink);stroke-width:2}
+.node text{font-size:14px;font-weight:800;fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+.node.start circle{fill:var(--green);stroke:var(--green)}
+.node.dest circle{fill:var(--red);stroke:var(--red)}
+.node.mid circle{fill:var(--orange);stroke:var(--orange)}
+.node.start text,.node.dest text,.node.mid text{fill:#fff}
+.node.dim{opacity:.7}
+.node.reached circle{stroke:var(--ink);stroke-width:4}
+.node.start.dest circle{stroke:var(--red);stroke-width:5}
+#token{fill:var(--ink);stroke:var(--field);stroke-width:2.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Budget Traveller</h1>
+    <p>Find the cheapest way from city 1 to city N with at most K stops and C half-price coupons, then watch the trip play out flight by flight.</p>
+  </header>
+
+  <div class="grid">
+    <div class="stack">
+      <section class="card" aria-label="Input">
+        <div class="tabs" role="tablist">
+          <button class="tab" role="tab" id="tab1" aria-selected="true" data-mode="1">Type input</button>
+          <button class="tab" role="tab" id="tab2" aria-selected="false" data-mode="2">CSV file</button>
+          <button class="tab" role="tab" id="tab3" aria-selected="false" data-mode="3">Generate</button>
+        </div>
+
+        <div class="mode on" id="mode1">
+          <label for="txt">N M, then K C, then M lines of "u v price"</label>
+          <textarea id="txt" spellcheck="false">6 9
+2 2
+1 2 40
+1 3 100
+2 3 30
+2 4 80
+3 4 20
+3 5 60
+4 6 50
+5 6 25
+1 4 150</textarea>
+          <div class="btn-row"><button class="btn" id="solve1">Find cheapest route</button></div>
+        </div>
+
+        <div class="mode" id="mode2">
+          <div class="row">
+            <div><label for="k2">Max stops (K)</label><input id="k2" type="number" min="0" value="2"></div>
+            <div><label for="c2">Coupons (C)</label><input id="c2" type="number" min="0" value="2"></div>
+            <div><label for="n2">Cities (N)</label><input id="n2" type="number" min="1" placeholder="auto"></div>
+          </div>
+          <div style="margin-top:12px"><label for="file">Graph CSV (columns: u,v,price)</label><input id="file" type="file" accept=".csv,text/csv,text/plain"></div>
+          <p class="hint">A header row is optional. If N is left blank it is the largest city number in the file.</p>
+          <div class="btn-row"><button class="btn" id="solve2">Find cheapest route</button></div>
+        </div>
+
+        <div class="mode" id="mode3">
+          <div class="row">
+            <div><label for="n3">Cities (N)</label><input id="n3" type="number" min="2" max="40" value="8"></div>
+            <div><label for="k3">Max stops (K)</label><input id="k3" type="number" min="0" value="3"></div>
+            <div><label for="c3">Coupons (C)</label><input id="c3" type="number" min="0" value="2"></div>
+          </div>
+          <p class="hint">Builds a random flight network that always contains at least one valid route from 1 to N. The graph is also written into the text input so you can reuse it.</p>
+          <div class="btn-row"><button class="btn" id="solve3">Generate and solve</button></div>
+        </div>
+        <div id="msg" role="alert"></div>
+      </section>
+
+      <section class="card" id="resultCard" hidden aria-live="polite">
+        <h2>Result</h2>
+        <div class="answer"><span class="big" id="cost">-</span><span class="lbl" id="costLbl">minimum total cost</span></div>
+        <p class="route" id="route"></p>
+        <div class="btn-row"><button class="btn secondary" id="dl">Download result CSV</button></div>
+        <details><summary>Preview CSV</summary><pre id="csvPre"></pre></details>
+      </section>
+    </div>
+
+    <section class="card" aria-label="Route visualization">
+      <div class="stats">
+        <div class="stat"><span>Running cost</span><strong id="sCost">0</strong></div>
+        <div class="stat"><span>Stops used</span><strong id="sStops">0</strong> <small id="sStopsMax"></small></div>
+        <div class="stat"><span>Coupons used</span><strong id="sCoup">0</strong> <small id="sCoupMax"></small></div>
+      </div>
+      <p class="now" id="now">Solve a graph to see the journey.</p>
+      <div class="stage">
+        <svg id="svg" viewBox="0 0 800 560" role="img" aria-label="Flight network graph"></svg>
+      </div>
+      <div class="controls">
+        <button class="btn" id="play" disabled>Play</button>
+        <button class="btn secondary" id="step" disabled>Step</button>
+        <button class="btn secondary" id="reset" disabled>Reset</button>
+        <label for="speed" style="margin:0 0 0 6px">Speed</label>
+        <select id="speed"><option value="0.5">0.5x</option><option value="1" selected>1x</option><option value="2">2x</option><option value="4">4x</option></select>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--green)"></i>Start</span>
+        <span><i style="background:var(--red)"></i>Destination</span>
+        <span><i style="background:var(--orange)"></i>Intermediate stop</span>
+        <span><i class="ln" style="background:var(--path)"></i>Chosen path</span>
+        <span><i class="ln" style="background:var(--gold)"></i>Coupon applied</span>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const SVGNS = "http://www.w3.org/2000/svg";
+
+/* ---------- state ---------- */
+let G = null;          // {N,K,C,edges}
+let sol = null;        // {cost,path,nodes,coupon}
+let pos = [];
+let edgeEls = [], tokenPaths = [], pathPos = new Map(), nodeEls = [];
+let anim = {i:0, t:0, hold:0, playing:false};
+let csvText = "";
+
+/* ---------- parsing ---------- */
+function validate(N,K,C,edges){
+  if(![N,K,C].every(Number.isInteger)) throw new Error("N, K and C must be whole numbers.");
+  if(N<1) throw new Error("N must be at least 1.");
+  if(K<0 || C<0) throw new Error("K and C cannot be negative.");
+  edges.forEach((e,i)=>{
+    if(![e.u,e.v,e.p].every(Number.isInteger)) throw new Error("Flight "+(i+1)+" has a value that is not a whole number.");
+    if(e.u<1||e.u>N||e.v<1||e.v>N) throw new Error("Flight "+(i+1)+" uses a city outside 1.."+N+".");
+    if(e.p<0) throw new Error("Flight "+(i+1)+" has a negative price.");
+  });
+}
+function parseText(text){
+  const tok = text.split(/\s+/).filter(Boolean).map(Number);
+  if(tok.length<4 || tok.some(x=>Number.isNaN(x))) throw new Error("Expected: N M, then K C, then M flight lines.");
+  const [N,M,K,C] = tok;
+  if(!Number.isInteger(M)||M<0) throw new Error("M must be a non-negative whole number.");
+  if(tok.length<4+3*M) throw new Error("Found fewer than "+M+" flight lines.");
+  const edges=[];
+  for(let i=0;i<M;i++) edges.push({u:tok[4+3*i],v:tok[5+3*i],p:tok[6+3*i]});
+  validate(N,K,C,edges);
+  return {N,K,C,edges};
+}
+function parseCSV(text,K,C,Nopt){
+  const edges=[];
+  text.split(/\r?\n/).forEach((line,li)=>{
+    line=line.trim(); if(!line) return;
+    const c=line.split(/[,;\t]/).map(s=>s.trim());
+    if(c.length<3) throw new Error("CSV line "+(li+1)+" needs three columns: u,v,price.");
+    const [u,v,p]=c.slice(0,3).map(Number);
+    if(edges.length===0 && [u,v,p].some(Number.isNaN)) return; // header
+    edges.push({u,v,p});
+  });
+  let N=Nopt;
+  if(!Number.isInteger(N)) N=edges.reduce((m,e)=>Math.max(m,e.u,e.v),1);
+  validate(N,K,C,edges);
+  return {N,K,C,edges};
+}
+
+/* ---------- solver: layered DP over (flights used, coupons used, city) ---------- */
+function solve(g){
+  const {N,K,C,edges}=g;
+  if(N===1) return {cost:0,path:[],nodes:[1],coupon:[]};
+  const E=K+1, INF=Infinity, dp=[], par=[];
+  for(let e=0;e<=E;e++){
+    dp.push([]);par.push([]);
+    for(let c=0;c<=C;c++){dp[e].push(new Array(N+1).fill(INF));par[e].push(new Array(N+1).fill(null));}
+  }
+  dp[0][0][1]=0;
+  for(let e=0;e<E;e++) for(let c=0;c<=C;c++){
+    const cur=dp[e][c];
+    for(let idx=0;idx<edges.length;idx++){
+      const ed=edges[idx];
+      if(ed.u===ed.v) continue;
+      const d=cur[ed.u]; if(d===INF) continue;
+      let nd=d+ed.p;
+      if(nd<dp[e+1][c][ed.v]){dp[e+1][c][ed.v]=nd;par[e+1][c][ed.v]=[idx,0];}
+      if(c<C){
+        nd=d+Math.floor(ed.p/2);
+        if(nd<dp[e+1][c+1][ed.v]){dp[e+1][c+1][ed.v]=nd;par[e+1][c+1][ed.v]=[idx,1];}
+      }
+    }
+  }
+  let best=INF,bE=-1,bC=-1;
+  for(let e=1;e<=E;e++) for(let c=0;c<=C;c++){
+    if(dp[e][c][N]<best){best=dp[e][c][N];bE=e;bC=c;}   // ties: fewer flights, then fewer coupons
+  }
+  if(best===INF) return {cost:-1,path:[],nodes:[],coupon:[]};
+  const path=[],coupon=[];
+  let e=bE,c=bC,v=N;
+  while(e>0){
+    const [idx,used]=par[e][c][v];
+    path.unshift(idx);coupon.unshift(used===1);
+    v=edges[idx].u;c-=used;e--;
+  }
+  return {cost:best,path,nodes:[1,...path.map(i=>edges[i].v)],coupon};
+}
+const paid=(ed,used)=>used?Math.floor(ed.p/2):ed.p;
+
+/* ---------- CSV output ---------- */
+function buildCSV(g,s){
+  const on=new Map(); s.path.forEach((idx,k)=>on.set(idx,s.coupon[k]));
+  const rows=["u,v,price,path,coupon,paid"];
+  g.edges.forEach((ed,idx)=>{
+    if(on.has(idx)){const cu=on.get(idx);rows.push([ed.u,ed.v,ed.p,"x",cu?"x":"",paid(ed,cu)].join(","));}
+    else rows.push([ed.u,ed.v,ed.p,"","",""].join(","));
+  });
+  return rows.join("\n")+"\n";
+}
+
+/* ---------- random graph ---------- */
+function generate(N,K,C){
+  if(!Number.isInteger(N)||N<2||N>40) throw new Error("N must be a whole number between 2 and 40.");
+  if(!Number.isInteger(K)||K<0||!Number.isInteger(C)||C<0) throw new Error("K and C must be non-negative whole numbers.");
+  const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+  const maxL=Math.min(K+1,N-1), L=ri(1,maxL);
+  const pool=[];for(let i=2;i<N;i++)pool.push(i);
+  for(let i=pool.length-1;i>0;i--){const j=ri(0,i);[pool[i],pool[j]]=[pool[j],pool[i]];}
+  const chain=[1,...pool.slice(0,L-1),N];
+  const seen=new Set(),edges=[];
+  const add=(u,v,p)=>{const k=u+"-"+v;if(u===v||seen.has(k))return;seen.add(k);edges.push({u,v,p});};
+  for(let i=0;i<chain.length-1;i++) add(chain[i],chain[i+1],ri(20,120));
+  const target=Math.round(N*1.9);
+  let guard=0;
+  while(edges.length<target && guard++<2000) add(ri(1,N),ri(1,N),ri(10,150));
+  for(let i=edges.length-1;i>0;i--){const j=ri(0,i);[edges[i],edges[j]]=[edges[j],edges[i]];}
+  return {N,K,C,edges};
+}
+const toText=g=>g.N+" "+g.edges.length+"\n"+g.K+" "+g.C+"\n"+g.edges.map(e=>e.u+" "+e.v+" "+e.p).join("\n");
+
+/* ---------- layout ---------- */
+function layout(N,edges){
+  const W=800,H=560,m=46,cx=W/2,cy=H/2;
+  let seed=11;const rnd=()=>{seed=(seed*16807)%2147483647;return seed/2147483647;};
+  const ring=[];for(let i=1;i<N;i++)ring.push(i);
+  if(N>1) ring.splice(Math.floor(N/2),0,N); else ring.push(1);
+  const p=new Array(N+1);
+  ring.forEach((v,idx)=>{
+    const a=Math.PI+2*Math.PI*idx/N;
+    p[v]={x:cx+(W/2-m)*0.88*Math.cos(a)+rnd()*2,y:cy+(H/2-m)*0.88*Math.sin(a)+rnd()*2};
+  });
+  if(N>40||N<3) return p;
+  const k=Math.sqrt(W*H/N)*0.72, IT=300;
+  for(let it=0;it<IT;it++){
+    const temp=1-it/IT, dx=new Array(N+1).fill(0), dy=new Array(N+1).fill(0);
+    for(let i=1;i<=N;i++) for(let j=i+1;j<=N;j++){
+      let x=p[i].x-p[j].x,y=p[i].y-p[j].y,d=Math.max(Math.hypot(x,y),0.01),f=k*k/d;
+      dx[i]+=x/d*f;dy[i]+=y/d*f;dx[j]-=x/d*f;dy[j]-=y/d*f;
+    }
+    edges.forEach(e=>{
+      if(e.u===e.v)return;
+      let x=p[e.u].x-p[e.v].x,y=p[e.u].y-p[e.v].y,d=Math.max(Math.hypot(x,y),0.01),f=d*d/k;
+      dx[e.u]-=x/d*f;dy[e.u]-=y/d*f;dx[e.v]+=x/d*f;dy[e.v]+=y/d*f;
+    });
+    for(let i=1;i<=N;i++){
+      dx[i]-=(p[i].x-cx)*0.9;dy[i]-=(p[i].y-cy)*0.9;
+      const len=Math.max(Math.hypot(dx[i],dy[i]),0.01),lim=28*temp+0.5,s=Math.min(len,lim)/len;
+      p[i].x=Math.min(W-m,Math.max(m,p[i].x+dx[i]*s));
+      p[i].y=Math.min(H-m,Math.max(m,p[i].y+dy[i]*s));
+    }
+  }
+  return p;
+}
+
+/* ---------- drawing ---------- */
+function el(name,attrs,parent){
+  const n=document.createElementNS(SVGNS,name);
+  for(const k in attrs) n.setAttribute(k,attrs[k]);
+  if(parent) parent.appendChild(n);
+  return n;
+}
+function drawGraph(){
+  const svg=$("#svg"); svg.innerHTML="";
+  const R=19;
+  const defs=el("defs",{},svg);
+  [["a-edge","--edge"],["a-path","--path"],["a-gold","--gold"]].forEach(([id,v])=>{
+    const m=el("marker",{id,viewBox:"0 0 10 10",refX:"9",refY:"5",markerWidth:"11",markerHeight:"11",markerUnits:"userSpaceOnUse",orient:"auto"},defs);
+    el("path",{d:"M0 0L10 5L0 10z",style:"fill:var("+v+")"},m);
+  });
+  const gE=el("g",{},svg), gL=el("g",{},svg), gN=el("g",{},svg);
+  const {N,edges}=G;
+  pos=layout(N,edges);
+  pathPos=new Map(); sol.path.forEach((idx,k)=>pathPos.set(idx,k));
+  edgeEls=[]; tokenPaths=[];
+  const dup=new Map();
+  edges.forEach((ed,idx)=>{
+    if(ed.u===ed.v){edgeEls.push(null);return;}
+    const a=pos[ed.u],b=pos[ed.v],key=ed.u+"-"+ed.v,di=dup.get(key)||0;dup.set(key,di+1);
+    const dx=b.x-a.x,dy=b.y-a.y,len=Math.hypot(dx,dy)||1,off=0.15+0.13*di;
+    const c={x:(a.x+b.x)/2-dy/len*len*off,y:(a.y+b.y)/2+dx/len*len*off};
+    const un=(p,q)=>{const d=Math.hypot(q.x-p.x,q.y-p.y)||1;return{x:(q.x-p.x)/d,y:(q.y-p.y)/d};};
+    const ua=un(a,c),ub=un(b,c);
+    const s={x:a.x+ua.x*R,y:a.y+ua.y*R}, e={x:b.x+ub.x*(R+3),y:b.y+ub.y*(R+3)};
+    const path=el("path",{d:`M${s.x} ${s.y}Q${c.x} ${c.y} ${e.x} ${e.y}`,class:"edge","marker-end":"url(#a-edge)"},gE);
+    const lx=0.25*s.x+0.5*c.x+0.25*e.x, ly=0.25*s.y+0.5*c.y+0.25*e.y;
+    const label=el("text",{x:lx,y:ly,class:"elabel"},gL); label.textContent=ed.p;
+    edgeEls.push({path,label});
+    if(pathPos.has(idx)){
+      const tp=el("path",{d:`M${a.x} ${a.y}Q${c.x} ${c.y} ${b.x} ${b.y}`,fill:"none",stroke:"none"},svg);
+      tokenPaths[pathPos.get(idx)]=tp;
+    }
+  });
+  nodeEls=[];
+  const mids=new Set(sol.nodes.slice(1,-1));
+  for(let v=1;v<=N;v++){
+    let cls="node";
+    if(v===1) cls+=" start";
+    if(v===N) cls+=" dest";
+    if(v!==1&&v!==N&&mids.has(v)) cls+=" mid";
+    if(sol.cost>=0 && !sol.nodes.includes(v)) cls+=" dim";
+    const g=el("g",{class:cls,transform:`translate(${pos[v].x} ${pos[v].y})`},gN);
+    el("circle",{r:R},g);
+    const t=el("text",{},g);t.textContent=v;
+    nodeEls[v]=g;
+  }
+  el("circle",{id:"token",r:7,cx:pos[1].x,cy:pos[1].y,visibility:"hidden"},svg);
+}
+
+function paint(){
+  if(!sol||!G) return;
+  const {edges,K,C,N}=G, len=sol.path.length, i=anim.i, t=anim.t;
+  edgeEls.forEach((E,idx)=>{
+    if(!E) return;
+    const k=pathPos.get(idx), ed=edges[idx];
+    let cls="edge",lcls="elabel",txt=String(ed.p),mk="a-edge";
+    if(k!==undefined){
+      cls+=" onpath";lcls+=" onpath";mk="a-path";
+      const started=k<i||(k===i&&t>0);
+      if(started){
+        const cu=sol.coupon[k];
+        if(cu){cls+=" coupon";lcls+=" coupon";mk="a-gold";txt=ed.p+" \u2192 "+Math.floor(ed.p/2);}
+        else cls+=" flown";
+        if(k===i) cls+=" active";
+      }
+    }
+    E.path.setAttribute("class",cls);E.path.setAttribute("marker-end","url(#"+mk+")");
+    E.label.setAttribute("class",lcls);E.label.textContent=txt;
+  });
+  sol.nodes.forEach((v,j)=>nodeEls[v].classList.toggle("reached",j<=i&&len>0));
+  const tok=$("#token");
+  if(len>0){
+    tok.setAttribute("visibility","visible");
+    let p;
+    if(i<len&&t>0){
+      const tp=tokenPaths[i],L=tp.getTotalLength(),s=t*t*(3-2*t);
+      p=tp.getPointAtLength(L*s);
+    } else p=pos[sol.nodes[Math.min(i,len)]];
+    tok.setAttribute("cx",p.x);tok.setAttribute("cy",p.y);
+  } else tok.setAttribute("visibility","hidden");
+
+  let cost=0,coup=0;
+  for(let k=0;k<Math.min(i,len);k++){cost+=paid(edges[sol.path[k]],sol.coupon[k]);if(sol.coupon[k])coup++;}
+  const stops=len===0?0:(i>=len?len-1:i);
+  $("#sCost").textContent=cost;
+  $("#sStops").textContent=stops;$("#sStopsMax").textContent="of "+K;
+  $("#sCoup").textContent=coup;$("#sCoupMax").textContent="of "+C;
+  const now=$("#now");
+  if(sol.cost<0){now.textContent="No route reaches city "+N+" within "+K+" stops.";}
+  else if(len===0){now.textContent="Start and destination are the same city. Cost 0.";}
+  else if(i>=len){now.textContent="Arrived in city "+N+" for a total of "+cost+".";}
+  else{
+    const ed=edges[sol.path[i]],cu=sol.coupon[i];
+    const started=t>0||i>0;
+    const head=(t>0?"Flying ":"Next: ")+ed.u+" \u2192 "+ed.v+". ";
+    now.innerHTML="";
+    now.append(head);
+    if(cu&&t>0){const s=document.createElement("span");s.className="gold";s.textContent="Coupon applied: "+ed.p+" \u2192 "+Math.floor(ed.p/2);now.append(s);}
+    else if(cu){now.append("Coupon will be used ("+ed.p+" \u2192 "+Math.floor(ed.p/2)+").");}
+    else now.append("Price "+ed.p+".");
+  }
+}
+
+/* ---------- animation loop ---------- */
+let last=0;
+function loop(ts){
+  requestAnimationFrame(loop);
+  const dt=Math.min(ts-last,50);last=ts;
+  if(!anim.playing||!sol) return;
+  const sp=+$("#speed").value;
+  if(anim.hold>0){anim.hold=Math.max(0,anim.hold-dt*sp);return;}
+  anim.t+=dt*sp/1300;
+  if(anim.t>=1){
+    anim.i++;anim.t=0;anim.hold=350;
+    if(anim.i>=sol.path.length){anim.playing=false;setPlay();}
+  }
+  paint();
+}
+requestAnimationFrame(loop);
+function setPlay(){$("#play").textContent=anim.playing?"Pause":(anim.i>=(sol?sol.path.length:0)&&anim.i>0?"Replay":"Play");}
+$("#play").onclick=()=>{
+  if(!sol||!sol.path.length) return;
+  if(anim.playing){anim.playing=false;}
+  else{
+    if(anim.i>=sol.path.length){anim.i=0;anim.t=0;}
+    anim.hold=0;anim.playing=true;
+  }
+  setPlay();paint();
+};
+$("#step").onclick=()=>{
+  if(!sol||!sol.path.length) return;
+  anim.playing=false;
+  if(anim.i>=sol.path.length){anim.i=0;}else{anim.i++;}
+  anim.t=0;anim.hold=0;setPlay();paint();
+};
+$("#reset").onclick=()=>{anim={i:0,t:0,hold:0,playing:false};setPlay();paint();};
+
+/* ---------- run ---------- */
+function showResult(){
+  const card=$("#resultCard");card.hidden=false;
+  const {edges}=G;
+  $("#cost").textContent=sol.cost;
+  if(sol.cost<0){
+    $("#costLbl").textContent="no valid route";
+    $("#route").textContent="City "+G.N+" cannot be reached from city 1 with at most "+G.K+" stops.";
+  } else {
+    $("#costLbl").textContent="minimum total cost";
+    const parts=sol.path.map((idx,k)=>{
+      const ed=edges[idx],cu=sol.coupon[k];
+      return cu?`${ed.u}\u2192${ed.v} (${ed.p}\u2192${Math.floor(ed.p/2)}, coupon)`:`${ed.u}\u2192${ed.v} (${ed.p})`;
+    });
+    const nc=sol.coupon.filter(Boolean).length;
+    const r=$("#route");r.innerHTML="";
+    const b=document.createElement("b");b.textContent="Route: "+sol.nodes.join(" \u2192 ");
+    r.append(b);
+    r.append(document.createElement("br"));
+    r.append(sol.path.length?parts.join(", "):"Already at the destination.");
+    r.append(document.createElement("br"));
+    const sp=document.createElement("span");sp.className="chip-coupon";
+    sp.textContent=sol.path.length+" flight"+(sol.path.length===1?"":"s")+", "+Math.max(sol.path.length-1,0)+" stop"+(sol.path.length===2?"":"s")+", "+nc+" coupon"+(nc===1?"":"s")+" used";
+    r.append(sp);
+  }
+  csvText=buildCSV(G,sol);
+  $("#csvPre").textContent=csvText;
+}
+function run(g){
+  $("#msg").textContent="";
+  G=g;sol=solve(g);
+  anim={i:0,t:0,hold:0,playing:false};
+  drawGraph();showResult();
+  const can=sol.path.length>0;
+  ["play","step","reset"].forEach(id=>$("#"+id).disabled=!can);
+  setPlay();paint();
+}
+function guard(fn){try{fn();}catch(e){$("#msg").textContent=e.message;}}
+
+$("#solve1").onclick=()=>guard(()=>run(parseText($("#txt").value)));
+$("#solve2").onclick=async()=>{
+  try{
+    const f=$("#file").files[0];
+    if(!f) throw new Error("Choose a CSV file first.");
+    const K=parseInt($("#k2").value,10),C=parseInt($("#c2").value,10);
+    const nv=$("#n2").value.trim();
+    const g=parseCSV(await f.text(),K,C,nv===""?NaN:parseInt(nv,10));
+    run(g);
+  }catch(e){$("#msg").textContent=e.message;}
+};
+$("#solve3").onclick=()=>guard(()=>{
+  const g=generate(parseInt($("#n3").value,10),parseInt($("#k3").value,10),parseInt($("#c3").value,10));
+  $("#txt").value=toText(g);
+  run(g);
+});
+
+/* tabs */
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.setAttribute("aria-selected",x===b?"true":"false"));
+  document.querySelectorAll(".mode").forEach(m=>m.classList.remove("on"));
+  $("#mode"+b.dataset.mode).classList.add("on");
+  $("#msg").textContent="";
+});
+
+/* download */
+$("#dl").onclick=async()=>{
+  if(!csvText) return;
+  try{
+    const d=(typeof claude!=="undefined"&&claude.use)?await claude.use("downloads"):null;
+    if(d){await d.save({filename:"route_result.csv",data:csvText});return;}
+  }catch(e){ if(e&&e.code==="declined") return; }
+  try{
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([csvText],{type:"text/csv"}));
+    a.download="route_result.csv";document.body.appendChild(a);a.click();a.remove();
+  }catch(e){$("#msg").textContent="Could not save the file here. Copy it from the CSV preview instead.";}
+};
+
+/* initial run with the sample */
+guard(()=>run(parseText($("#txt").value)));
+</script>
+</body>
+</html>
